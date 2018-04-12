@@ -5,13 +5,20 @@ const path = require('path');
 const url = require('url');
 var port = process.env.PORT || 8080;
 
+const dbUrl = 'mongodb://localhost:27017';
+const dbName = "test";
+const dbCollectionName = "searchs";
+
+
 http.createServer(function(req, res){
 	
-	var url = req.url;
-	var offset = "";
-	var termreq = "";
-	
-
+	var timeOfRequest = new Date();
+	var parsedUrl = url.parse(req.url);
+	var pathName = parsedUrl.pathname;
+	var myOffset = parsedUrl.query;
+	var urlBaseName = path.basename(pathName);
+	var urlDirName = path.dirname(pathName);
+	var _term = decodeURIComponent(urlBaseName);
 	
 	var returnedQuery = {
 		url: "a",
@@ -19,22 +26,22 @@ http.createServer(function(req, res){
 		thumbnail: "c",
 		context: "d"
 	}
-	var _term = url.parse(termreq);
-	
-	
-	MongoClient.update({}, {}, function(date){
-		
-	});
-    var response = [];
+	console.log(req.url);
 	var recentSearchQueries = {
-		term: "A",
-		when: "B",
+		term: _term,
+		when: timeOfRequest
 	}
-	for(var i = 0; i < 10, i++){
-		
-	}
-	res.writeHead('Content-Type':'text/plain');
-	res.write(JSON.parse(response));
+	
+	MongoClient.connect(dbUrl, function(err, client){
+		if(err) console.log("err");
+		var db = client.db(dbName);
+		var collection = db.collection(dbCollectionName);
+		collection.insertOne(recentSearchQueries);
+		client.close();
+	});
+	
+	res.writeHead(200, {'Content-Type':'text/plain'});
+	res.write(JSON.stringify(recentSearchQueries));
 	res.end();
 	
 }).listen(port);
