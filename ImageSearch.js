@@ -20,12 +20,27 @@ http.createServer(function(req, res){
 	var urlQuery = parsedUrl.query;
 	var urlDirName = path.dirname(urlPathName);
 
-	//have to validate the urlBaseName later
-	//have to create validation test to the myOffset later
+	/*to prevent unauthorized access to the database  
+	 *urlBaseName shall not contain any of the 
+	 *special character and must not be an object
+	 */
+	function validadeBeforeDatabase(string){
+		return (/[\$:\{\}]/g).test(string);
+	}
+	
+	function getOffsetNum(string){
+		var regex = /offset=([0-9]+)/;
+		var isOffsetValid = regex.test(string);
+		if(isOffsetValid){
+			return string.replace(regex, '$1')
+		}
+		else return null;
+	} 
+	
 
 	if(urlDirName=="/api/imagesearch"){
-
 	  var urlBaseName = path.basename(urlPathName);
+	  console.log(urlBaseName);
 	  var clientSearch = decodeURIComponent(urlBaseName); 
 	  var recentSearchQueries = {
 		term: clientSearch,
@@ -39,6 +54,7 @@ http.createServer(function(req, res){
 		collection.insertOne(recentSearchQueries);
 		client.close();
 	  });
+	  /////////////////////////////////////////////////////////////////
 	  //use a searcher's API to get images
 	  var returnedQuery = {
 		url: "a",
@@ -50,6 +66,7 @@ http.createServer(function(req, res){
 	  res.writeHead(200, {'Content-Type':'text/plain'});
 	  res.write(JSON.stringify(recentSearchQueries));
 	  res.end();
+	  /////////////////////////////////////////////////////////////////
 	}
 	else if(urlPathName=="/api/latest"){
 		MongoClient.connect(dbUrl, function(err, client){
@@ -73,7 +90,7 @@ http.createServer(function(req, res){
 	}	
     else{
       res.writeHead(200, {'Content-Type':'text/plain'});
-	  res.write("404: Page Not Found");
+	  res.write("404: Not Found");
 	  res.end();
 	}
 }).listen(port);
