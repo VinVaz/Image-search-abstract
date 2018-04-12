@@ -1,3 +1,5 @@
+"use strict";
+
 const http = require('http');
 const MongoClient = require("mongodb").MongoClient;
 const fs = require('fs');
@@ -17,22 +19,12 @@ http.createServer(function(req, res){
 	var urlPathName = parsedUrl.pathname;
 	var urlQuery = parsedUrl.query;
 	var urlDirName = path.dirname(urlPathName);
-	var urlBaseName = "";
-	var clientSearch = "";	  
-	var recentSearchQueries = {};
 
-
-	var returnedQuery = {
-		url: "a",
-		snippet: "b",
-		thumbnail: "c",
-		context: "d"
-	}
 	//have to validate the urlBaseName later
 	//have to create validation test to the myOffset later
-	
+
 	if(urlDirName=="/api/imagesearch"){
-		
+
 	  var urlBaseName = path.basename(urlPathName);
 	  var clientSearch = decodeURIComponent(urlBaseName); 
 	  var recentSearchQueries = {
@@ -47,37 +39,43 @@ http.createServer(function(req, res){
 		collection.insertOne(recentSearchQueries);
 		client.close();
 	  });
-	  
+	  //use a searcher's API to get images
+	  var returnedQuery = {
+		url: "a",
+		snippet: "b",
+		thumbnail: "c",
+		context: "d"
+	  }
 	  //will return the searched images
 	  res.writeHead(200, {'Content-Type':'text/plain'});
 	  res.write(JSON.stringify(recentSearchQueries));
 	  res.end();
 	}
-	if(urlDirName=="/api/latest"){
+	else if(urlPathName=="/api/latest"){
 		MongoClient.connect(dbUrl, function(err, client){
-		if(err) console.log("err");
-		const db = client.db(dbName);
-		const collection = db.collection(dbCollectionName);
+		  if(err) console.log("err");
+		  const db = client.db(dbName);
+		  const collection = db.collection(dbCollectionName);
         
-		function response(){
-		    collection.find({}, function(err, data){
-			callback(null, data);
+		  var lastSearch = new Promise(function(resolve, reject){
+	        collection.find({}, {projection: {_id: 0}}).sort({_id: -1}).limit(2).toArray(function(err, data){
+			  //reject(err);
+			  resolve(data);
+		    }); 
 		  });
-		}
-		response(function(err, data){
+		  lastSearch.then(function(data){
 			res.writeHead(200, {'Content-Type':'text/plain'});
 			res.write(JSON.stringify(data));
 			res.end();
-		});
-		client.close();
-	  });
+		  });
+		  client.close();
+	    });
 	}	
     else{
       res.writeHead(200, {'Content-Type':'text/plain'});
 	  res.write("404: Page Not Found");
 	  res.end();
 	}
-	
 }).listen(port);
 
 
