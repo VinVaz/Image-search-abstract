@@ -22,12 +22,12 @@ http.createServer(function(req, res){
 
 	/*to prevent unauthorized access to the database  
 	 *urlBaseName shall not contain any of the 
-	 *special character and must not be an object
+	 *special characters used, also it mustn't be an object
 	 */
-	function validadeBeforeDatabase(string){
-		return (/[\$:\{\}]/g).test(string);
+	function isValidBeforeDatabase(string){
+		if((/[\$:\{\}]/g).test(string)) return false;
+		else return true;
 	}
-	
 	function getOffsetNum(string){
 		var regex = /offset=([0-9]+)/;
 		var isOffsetValid = regex.test(string);
@@ -36,37 +36,42 @@ http.createServer(function(req, res){
 		}
 		else return null;
 	} 
-	
-
 	if(urlDirName=="/api/imagesearch"){
 	  var urlBaseName = path.basename(urlPathName);
-	  console.log(urlBaseName);
-	  var clientSearch = decodeURIComponent(urlBaseName); 
-	  var recentSearchQueries = {
-		term: clientSearch,
-		when: timeOfRequest
-	  }	  
-		
-	  MongoClient.connect(dbUrl, function(err, client){
-		if(err) console.log("err");
-		const db = client.db(dbName);
-		const collection = db.collection(dbCollectionName);
-		collection.insertOne(recentSearchQueries);
-		client.close();
-	  });
-	  /////////////////////////////////////////////////////////////////
-	  //use a searcher's API to get images
-	  var returnedQuery = {
-		url: "a",
-		snippet: "b",
-		thumbnail: "c",
-		context: "d"
+	  var clientSearch = decodeURIComponent(urlBaseName);
+      
+	  if(isValidBeforeDatabase(clientSearch)){
+			  
+	    var recentSearchQueries = {
+		  term: clientSearch,
+		  when: timeOfRequest
+	    }	  
+	    MongoClient.connect(dbUrl, function(err, client){
+		  if(err) console.log("err");
+		  const db = client.db(dbName);
+		  const collection = db.collection(dbCollectionName);
+		  collection.insertOne(recentSearchQueries);
+		  client.close();
+	    });
+	    /////////////////////////////////////////////////////////////////
+	    //use a searcher's API to get images
+	    var returnedQuery = {
+		  url: "a",
+		  snippet: "b",
+		  thumbnail: "c",
+		  context: "d"
+	    }
+	    //will return the searched images
+	    res.writeHead(200, {'Content-Type':'text/plain'});
+	    res.write(JSON.stringify(recentSearchQueries));
+	    res.end();
+	    /////////////////////////////////////////////////////////////////
 	  }
-	  //will return the searched images
-	  res.writeHead(200, {'Content-Type':'text/plain'});
-	  res.write(JSON.stringify(recentSearchQueries));
-	  res.end();
-	  /////////////////////////////////////////////////////////////////
+	  else{
+		res.writeHead(200, {'Content-Type':'text/plain'});
+	    res.write("EROR: Invalid Search");
+	    res.end(); 
+	  }
 	}
 	else if(urlPathName=="/api/latest"){
 		MongoClient.connect(dbUrl, function(err, client){
@@ -75,7 +80,7 @@ http.createServer(function(req, res){
 		  const collection = db.collection(dbCollectionName);
         
 		  var lastSearch = new Promise(function(resolve, reject){
-	        collection.find({}, {projection: {_id: 0}}).sort({_id: -1}).limit(2).toArray(function(err, data){
+	        collection.find({}, {projection: {_id: 0}}).sort({_id: -1}).limit(4).toArray(function(err, data){
 			  //reject(err);
 			  resolve(data);
 		    }); 
